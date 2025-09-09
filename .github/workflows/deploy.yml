@@ -64,16 +64,29 @@ jobs:
 
       - name: 🏗️ Setup Azure Container Apps Environment
         run: |
-          echo "� Checking Container Apps environment..."
+          echo "🔍 Checking Container Apps environment..."
           if ! az containerapp env show -g "$RG" -n "$ENV_NAME" >/dev/null 2>&1; then
             echo "📦 Installing Container Apps extension..."
             az extension add --name containerapp --upgrade --yes
+            
+            # Use existing Log Analytics workspace
+            echo "🔍 Getting existing Log Analytics workspace..."
+            WORKSPACE_ID=$(az monitor log-analytics workspace show \
+              -g "$RG" \
+              -n "workspace-toressistfkvx" \
+              --query customerId -o tsv)
+            WORKSPACE_KEY=$(az monitor log-analytics workspace get-shared-keys \
+              -g "$RG" \
+              -n "workspace-toressistfkvx" \
+              --query primarySharedKey -o tsv)
             
             echo "🏗️ Creating Container Apps environment: $ENV_NAME in ${{ env.AZURE_REGION }}"
             az containerapp env create \
               --name "$ENV_NAME" \
               --resource-group "$RG" \
-              --location "${{ env.AZURE_REGION }}"
+              --location "${{ env.AZURE_REGION }}" \
+              --logs-workspace-id "$WORKSPACE_ID" \
+              --logs-workspace-key "$WORKSPACE_KEY"
            
             echo "✅ Container Apps environment created successfully"
           else
