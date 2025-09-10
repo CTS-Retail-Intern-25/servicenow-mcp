@@ -46,6 +46,7 @@ servicenow-mcp-sse = "servicenow_mcp.server_sse:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/servicenow_mcp"]
+include = ["src/servicenow_mcp/static/*"]
 
 [tool.black]
 line-length = 100

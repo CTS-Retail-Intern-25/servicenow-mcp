@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ServiceNow MCP Server</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #34495e; margin-top: 30px; }
+        .endpoint { background: #ecf0f1; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #3498db; }
+        .method { font-weight: bold; color: #e74c3c; }
+        .path { font-family: monospace; background: #2c3e50; color: white; padding: 2px 6px; border-radius: 3px; }
+        .description { margin: 10px 0; color: #555; }
+        ul { margin: 10px 0; }
+        li { margin: 5px 0; }
+        .status { color: #27ae60; font-weight: bold; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #bdc3c7; color: #7f8c8d; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 ServiceNow MCP Server</h1>
+        <p>Welcome to the ServiceNow Model Context Protocol (MCP) Server. This server provides AI models with access to ServiceNow functionality through a standardized interface.</p>
+        
+        <h2>📋 Available Endpoints</h2>
+        
+        <div class="endpoint">
+            <div><span class="method">GET</span> <span class="path">/</span></div>
+            <div class="description">This API documentation page</div>
+        </div>
+        
+        <div class="endpoint">
+            <div><span class="method">GET</span> <span class="path">/health</span></div>
+            <div class="description">Health check endpoint - returns server status</div>
+        </div>
+        
+        <div class="endpoint">
+            <div><span class="method">GET</span> <span class="path">/sse</span></div>
+            <div class="description">Server-Sent Events endpoint for MCP communication</div>
+        </div>
+        
+        <div class="endpoint">
+            <div><span class="method">POST</span> <span class="path">/messages/</span></div>
+            <div class="description">WebSocket message endpoint for MCP communication</div>
+        </div>
+        
+        <h2>🛠️ ServiceNow Tools</h2>
+        <p>This MCP server provides access to ServiceNow functionality including:</p>
+        <ul>
+            <li><strong>Incident Management</strong> - Create, update, and manage incidents</li>
+            <li><strong>Catalog Management</strong> - Manage service catalog items and categories</li>
+            <li><strong>Change Management</strong> - Handle change requests and approvals</li>
+            <li><strong>Knowledge Base</strong> - Create and manage knowledge articles</li>
+            <li><strong>User Management</strong> - Manage users and groups</li>
+            <li><strong>Workflow Management</strong> - Create and manage workflows</li>
+            <li><strong>Script Includes</strong> - Manage custom scripts and functions</li>
+            <li><strong>Agile Management</strong> - Handle stories, epics, and scrum tasks</li>
+        </ul>
+        
+        <h2>🔐 Authentication</h2>
+        <p>The server supports multiple authentication methods:</p>
+        <ul>
+            <li>Basic Authentication (username/password)</li>
+            <li>OAuth 2.0</li>
+            <li>API Key</li>
+        </ul>
+        
+        <h2>📖 Usage</h2>
+        <p>To use this MCP server with an AI model:</p>
+        <ol>
+            <li>Configure your AI client to connect to the <span class="path">/sse</span> endpoint</li>
+            <li>Ensure proper ServiceNow credentials are configured</li>
+            <li>Use available tools through MCP protocol</li>
+        </ol>
+        
+        <div class="footer">
+            <p>ServiceNow MCP Server - Powered by Model Context Protocol</p>
+        </div>
+    </div>
+</body>
+</html>

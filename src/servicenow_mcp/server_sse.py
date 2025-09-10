@@ -15,6 +15,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.sse import SseServerTransport
 from starlette.applications import Starlette
 from starlette.requests import Request
+from starlette.responses import JSONResponse, HTMLResponse
 from starlette.routing import Mount, Route
 
 from servicenow_mcp.server import ServiceNowMCP
@@ -37,9 +38,123 @@ def create_starlette_app(mcp_server: Server, *, debug: bool = False) -> Starlett
                 mcp_server.create_initialization_options(),
             )
 
+    async def handle_root(request: Request) -> HTMLResponse:
+        """Serve API documentation at the root endpoint."""
+        try:
+            # Get the path to the HTML file
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            html_file_path = os.path.join(current_dir, "static", "index.html")
+            
+            # Read the HTML content from file
+            with open(html_file_path, "r", encoding="utf-8") as f:
+                html_content = f.read()
+                
+            return HTMLResponse(content=html_content, status_code=200)
+            
+        except FileNotFoundError:
+            # Fallback HTML if file is not found
+            fallback_html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>ServiceNow MCP Server</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+                    .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; }
+                    h1 { color: #e74c3c; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>⚠️ ServiceNow MCP Server</h1>
+                    <p>API documentation template not found. Server is running but documentation is unavailable.</p>
+                    <p>Available endpoints:</p>
+                    <ul>
+                        <li><strong>GET /health</strong> - Health check</li>
+                        <li><strong>GET /sse</strong> - MCP SSE endpoint</li>
+                        <li><strong>POST /messages/</strong> - MCP messages</li>
+                    </ul>
+                </div>
+            </body>
+            </html>
+            """
+            return HTMLResponse(content=fallback_html, status_code=200)
+            
+        except Exception as e:
+            # Error fallback
+            error_html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>ServiceNow MCP Server - Error</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }}
+                    .container {{ max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; }}
+                    h1 {{ color: #e74c3c; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>❌ ServiceNow MCP Server - Error</h1>
+                    <p>Error loading documentation: {str(e)}</p>
+                    <p>Server is running but documentation display failed.</p>
+                </div>
+            </body>
+            </html>
+            """
+            return HTMLResponse(content=error_html, status_code=500)
+
+    async def handle_health(request: Request) -> JSONResponse:
+        """Health check endpoint."""
+        try:
+            # Get environment info
+            tool_package = os.getenv("MCP_TOOL_PACKAGE", "full")
+            debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
+            ssl_verify = os.getenv("SSL_VERIFY", "true").lower() == "true"
+            log_level = os.getenv("LOG_LEVEL", "INFO")
+            auth_type = os.getenv("SERVICENOW_AUTH_TYPE", "basic")
+            instance_url = os.getenv("SERVICENOW_INSTANCE_URL", "not-configured")
+            
+            # Basic server health info
+            health_data = {
+                "status": "healthy",
+                "service": "ServiceNow MCP Server",
+                "version": "1.0.0",
+                "endpoints": {
+                    "root": "/",
+                    "health": "/health", 
+                    "sse": "/sse",
+                    "messages": "/messages/"
+                },
+                "configuration": {
+                    "tool_package": tool_package,
+                    "debug_mode": debug_mode,
+                    "ssl_verify": ssl_verify,
+                    "log_level": log_level,
+                    "auth_type": auth_type,
+                    "instance_configured": "configured" if instance_url != "not-configured" else "not-configured"
+                },
+                "mcp": {
+                    "protocol_version": "2024-11-05",
+                    "server_ready": True
+                }
+            }
+            
+            return JSONResponse(content=health_data, status_code=200)
+            
+        except Exception as e:
+            error_data = {
+                "status": "unhealthy",
+                "service": "ServiceNow MCP Server",
+                "error": str(e)
+            }
+            return JSONResponse(content=error_data, status_code=500)
+
     return Starlette(
         debug=debug,
         routes=[
+            Route("/", endpoint=handle_root),
+            Route("/health", endpoint=handle_health),
             Route("/sse", endpoint=handle_sse),
             Mount("/messages/", app=sse.handle_post_message),
         ],

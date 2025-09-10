@@ -161,9 +161,19 @@ jobs:
           # Check server accessibility
           echo "🔍 Checking MCP Server accessibility..."
           if curl -f "$SERVER_URL" >/dev/null 2>&1; then
-            echo "✅ MCP Server is accessible"
+            echo "✅ MCP Server root endpoint is accessible"
           else
-            echo "⚠️ MCP Server accessibility check failed - service may still be starting"
+            echo "⚠️ MCP Server root endpoint accessibility check failed - service may still be starting"
+          fi
+          
+          # Check health endpoint
+          echo "🔍 Checking MCP Server health endpoint..."
+          if curl -f "$SERVER_URL/health" >/dev/null 2>&1; then
+            echo "✅ MCP Server health endpoint is accessible"
+            echo "📊 Health check response:"
+            curl -s "$SERVER_URL/health" | jq '.' || curl -s "$SERVER_URL/health"
+          else
+            echo "⚠️ MCP Server health endpoint check failed - service may still be starting"
           fi
 
       - name: ✅ Deployment Summary
@@ -172,6 +182,7 @@ jobs:
           echo ""
           echo "🌐 Your MCP Server is available at:"
           echo "   👉 MCP Server: https://$SERVER_FQDN"
+          echo "   👉 Health Check: https://$SERVER_FQDN/health"
           echo "   👉 SSE Endpoint: https://$SERVER_FQDN/sse"
           echo "   👉 Message Endpoint: https://$SERVER_FQDN/messages/"
           echo ""
@@ -183,10 +194,13 @@ jobs:
           echo "   🌍 Region: ${{ env.AZURE_REGION }}"
           echo ""
           echo "🔧 Configuration:"
-          echo "   📦 MCP Tool Package: ${{ secrets.MCP_TOOL_PACKAGE }}"
-          echo "   🔐 Auth Type: ${{ secrets.SERVICENOW_AUTH_TYPE }}"
-          echo "   🐛 Debug Mode: ${{ secrets.DEBUG_MODE }}"
+          echo "   📦 MCP Tool Package: ${{ secrets.MCP_TOOL_PACKAGE || 'full' }}"
+          echo "   🔐 Auth Type: ${{ secrets.SERVICENOW_AUTH_TYPE || 'basic' }}"
+          echo "   🐛 Debug Mode: ${{ secrets.DEBUG_MODE || 'false' }}"
+          echo "   🔍 SSL Verify: ${{ secrets.SSL_VERIFY || 'true' }}"
+          echo "   � Log Level: ${{ secrets.LOG_LEVEL || 'INFO' }}"
           echo ""
-          echo "🔗 Useful Commands:"
+          echo "�🔗 Useful Commands:"
           echo "   View Logs: az containerapp logs show --name $APP_NAME --resource-group $RG"
           echo "   Restart App: az containerapp restart --name $APP_NAME --resource-group $RG"
+          echo "   Scale App: az containerapp update --name $APP_NAME --resource-group $RG --min-replicas 0 --max-replicas 2"
