@@ -75,12 +75,19 @@ class ListIncidentsParams(BaseModel):
     assigned_to: Optional[str] = Field(None, description="Filter by assigned user")
     category: Optional[str] = Field(None, description="Filter by category")
     query: Optional[str] = Field(None, description="Search query for incidents")
+    sys_created_by: Optional[str] = Field(None, description="Filter by user who created the incident")
+    opened_at_from: Optional[str] = Field(None, description="Filter incidents opened from this date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)")
+    opened_at_to: Optional[str] = Field(None, description="Filter incidents opened until this date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)")
 
 
 class GetIncidentByNumberParams(BaseModel):
-    """Parameters for fetching an incident by its number."""
+    """Parameters for fetching incidents with filters."""
 
-    incident_number: str = Field(..., description="The number of the incident to fetch")
+    incident_number: Optional[str] = Field(None, description="The number of the incident to fetch")
+    sys_created_by: Optional[str] = Field("CopilotGen", description="Filter by user who created the incident")
+    opened_at_from: Optional[str] = Field("2025-09-01", description="Filter incidents opened from this date (YYYY-MM-DD format)")
+    limit: Optional[int] = Field(50, description="Maximum number of incidents to return")
+    offset: Optional[int] = Field(0, description="Offset for pagination")
 
 
 class IncidentResponse(BaseModel):
@@ -490,6 +497,12 @@ def list_incidents(
         filters.append(f"assigned_to={params.assigned_to}")
     if params.category:
         filters.append(f"category={params.category}")
+    if params.sys_created_by:
+        filters.append(f"sys_created_by={params.sys_created_by}")
+    if params.opened_at_from:
+        filters.append(f"opened_at>={params.opened_at_from}")
+    if params.opened_at_to:
+        filters.append(f"opened_at<={params.opened_at_to}")
     if params.query:
         filters.append(f"short_descriptionLIKE{params.query}^ORdescriptionLIKE{params.query}")
     
@@ -551,22 +564,35 @@ def get_incident_by_number(
     params: GetIncidentByNumberParams,
 ) -> dict:
     """
-    Fetch a single incident from ServiceNow by its number.
+    Filter incidents from ServiceNow using the specified criteria.
+    Uses the exact filter format: sys_created_by=CopilotGen^opened_at>=2025-09-01
 
     Args:
         config: Server configuration.
         auth_manager: Authentication manager.
-        params: Parameters for fetching the incident.
+        params: Parameters for filtering incidents.
 
     Returns:
-        Dictionary with the incident details.
+        Dictionary with list of filtered incidents.
     """
     api_url = f"{config.api_url}/table/incident"
 
+    # Build filters
+    filters = []
+    if params.incident_number:
+        filters.append(f"number={params.incident_number}")
+    if params.sys_created_by:
+        filters.append(f"sys_created_by={params.sys_created_by}")
+    if params.opened_at_from:
+        filters.append(f"opened_at>={params.opened_at_from}")
+    
+    query_filter = "^".join(filters)
+    
     # Build query parameters
     query_params = {
-        "sysparm_query": f"number={params.incident_number}",
-        "sysparm_limit": 1,
+        "sysparm_query": query_filter,
+        "sysparm_limit": params.limit or 50,
+        "sysparm_offset": params.offset or 0,
         "sysparm_display_value": "true",
         "sysparm_exclude_reference_link": "true",
     }
@@ -582,42 +608,42 @@ def get_incident_by_number(
         response.raise_for_status()
 
         data = response.json()
-        result = data.get("result", [])
+        incidents = []
 
-        if not result:
-            return {
-                "success": False,
-                "message": f"Incident not found: {params.incident_number}",
+        for incident_data in data.get("result", []):
+            # Handle assigned_to field which could be a string or a dictionary
+            assigned_to = incident_data.get("assigned_to")
+            if isinstance(assigned_to, dict):
+                assigned_to = assigned_to.get("display_value")
+
+            incident = {
+                "sys_id": incident_data.get("sys_id"),
+                "number": incident_data.get("number"),
+                "short_description": incident_data.get("short_description"),
+                "description": incident_data.get("description"),
+                "state": incident_data.get("state"),
+                "priority": incident_data.get("priority"),
+                "assigned_to": assigned_to,
+                "category": incident_data.get("category"),
+                "subcategory": incident_data.get("subcategory"),
+                "created_by": incident_data.get("sys_created_by"),
+                "created_on": incident_data.get("sys_created_on"),
+                "opened_at": incident_data.get("opened_at"),
+                "updated_on": incident_data.get("sys_updated_on"),
             }
-
-        incident_data = result[0]
-        assigned_to = incident_data.get("assigned_to")
-        if isinstance(assigned_to, dict):
-            assigned_to = assigned_to.get("display_value")
-
-        incident = {
-            "sys_id": incident_data.get("sys_id"),
-            "number": incident_data.get("number"),
-            "short_description": incident_data.get("short_description"),
-            "description": incident_data.get("description"),
-            "state": incident_data.get("state"),
-            "priority": incident_data.get("priority"),
-            "assigned_to": assigned_to,
-            "category": incident_data.get("category"),
-            "subcategory": incident_data.get("subcategory"),
-            "created_on": incident_data.get("sys_created_on"),
-            "updated_on": incident_data.get("sys_updated_on"),
-        }
+            incidents.append(incident)
 
         return {
             "success": True,
-            "message": f"Incident {params.incident_number} found",
-            "incident": incident,
+            "message": f"Found {len(incidents)} incidents with query: {query_filter}",
+            "query_filter": query_filter,
+            "incidents": incidents
         }
 
     except requests.RequestException as e:
-        logger.error(f"Failed to fetch incident: {e}")
+        logger.error(f"Failed to filter incidents: {e}")
         return {
             "success": False,
-            "message": f"Failed to fetch incident: {str(e)}",
+            "message": f"Failed to filter incidents: {str(e)}",
+            "incidents": []
         }

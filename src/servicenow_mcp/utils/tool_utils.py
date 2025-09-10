@@ -404,7 +404,7 @@ def get_tool_definitions(
             get_incident_by_number_tool,
             GetIncidentByNumberParams,
             str,  # Expects JSON string
-            "Get a specific incident by its number from ServiceNow",
+            "Get a specific incident by its number or filter incidents by criteria (sys_created_by, opened_at_from)",
             "json",  # Tool returns dict, needs JSON dump
         ),
         # Catalog Tools
